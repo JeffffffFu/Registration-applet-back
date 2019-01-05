@@ -53,6 +53,7 @@ public class MyServlet extends BaseServlet {
         String match_theme= request.getParameter("match_theme"); 
         System.out.println("match_theme="+match_theme);   
         String match_time = request.getParameter("match_time");  
+        String match_week=request.getParameter("match_week");
         String match_address = request.getParameter("match_address");
         String match_rule=request.getParameter("match_rule");
         String match_color=request.getParameter("match_color");
@@ -60,14 +61,18 @@ public class MyServlet extends BaseServlet {
         String match_remarks=request.getParameter("match_remarks");
         String sponsor=request.getParameter("user_name");
         String openid=request.getParameter("openid");
-        System.out.println("openid="+openid);  
+        String longitude1=request.getParameter("longitude");
+        String latitude1=request.getParameter("latitude");
+        double longitude=Double.valueOf(longitude1);
+        double latitude=Double.valueOf(latitude1);
+        System.out.println("longitude="+longitude);  
         
          //创建唯一ID，附属给每条数据
         DataProcessing key=new DataProcessing();
         String uuid=key.getId();
         String id=null;
         String match=null;
-        Match em=new Match(uuid,match_theme, match_time, match_address,match_rule,match_color,match_people,match_remarks,sponsor,"","");
+        Match em=new Match(uuid,match_theme, match_time,match_week, match_address,match_rule,match_color,match_people,match_remarks,sponsor,"","",longitude,latitude);
         Operate add=new Operate();
         add.add_match(em);   //将这条数据存入数据库
         //根据UUid找出比赛的信息
@@ -103,7 +108,7 @@ public class MyServlet extends BaseServlet {
 	        /* 星号表示所有的异域请求都可以接受， */  
 	        response.setHeader("Access-Control-Allow-Methods", "GET,POST");
 	        String openid=request.getParameter("openid");
-	        System.out.println("openid:"+openid);
+	        System.out.println("取出openid:"+openid);
 	        String user_match=null;
 	        ResultSet user_information=new Operate().find_userId(openid);
 	        while(user_information.next()) {
@@ -111,7 +116,7 @@ public class MyServlet extends BaseServlet {
 	        }
 	       System.out.println("user_match:"+user_match);
              //取出查询到的数据集
-	        ResultSet rs=new Operate().inquire_match(user_match);
+	        ResultSet rs=new Operate().inquire_match(user_match,openid);
 	        //调用转化方法，将其转化成json数据
 	        String json=new DataProcessing().resultSetToJson(rs);
 	        System.out.println("打印比赛数据："+json);
@@ -309,6 +314,8 @@ public class MyServlet extends BaseServlet {
 	        String join=null;   //从报名字段中取出的字符串存入其中
 	        String leave=null;  //从情节字段中取出的字符串存入其中
 	        String id=null;
+	        double longitude=0;
+	        double latitude=0;
 	        System.out.println("uuid:"+uuid);
 	        System.out.println("openid:"+openid);
              //取出查询到的数据集
@@ -331,7 +338,12 @@ public class MyServlet extends BaseServlet {
 	        String json_register=new DataProcessing().resultSetToJson(register_information);
 	        String json_leave=new DataProcessing().resultSetToJson(leave_information);
 	        //因为上面.next过了，可能导致这个数据集中的数据消失了，他们两段代码位置调换也会导致一侧的数据没有。所以只能重新去数据库查询了一遍。
-	        ResultSet re=new Operate().find_matchInformation(uuid);  //根据uuid查出对应比赛信息      
+	        ResultSet rs=new Operate().find_matchStatus(uuid, openid); //根据uuid和openid拼接出含有比赛状态的新表    
+	        while(rs.next()) {
+	        	longitude=rs.getDouble("longitude");  //因为经纬度是double类型 所以需要单独取出来 再拼接进去
+	        	latitude=rs.getDouble("latitude");
+	        }
+	        ResultSet re=new Operate().find_matchStatus(uuid, openid); 
 	        String match_information=new DataProcessing().resultSetToJson(re);
 	       //进行三个json数组的合并嵌套，需要JSONObject对象进行合并嵌套
 	        JSONObject jsonObject = new JSONObject();	  
@@ -339,13 +351,80 @@ public class MyServlet extends BaseServlet {
 	        jsonObject.put("json_leave", json_leave);
 	        jsonObject.put("match_information", match_information);
 	        jsonObject.put("disable_join", disable_join);
-	        jsonObject.put("disable_leave", disable_leave);	        
+	        jsonObject.put("disable_leave", disable_leave);
+	        jsonObject.put("longitude", longitude);
+	        jsonObject.put("latitude", latitude);
 	        String json = new Gson().toJson(jsonObject);   //将JSON对象转化成json数组
             //将打包好的数据传回给小程序
 	        Writer out = response.getWriter();
             out.write(json);
 	        out.flush();        
 	}
+
+	//更改比赛数据
+	public void edit_match(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException, ClassNotFoundException, SQLException {
+        // TODO Auto-generated method stub
+        
+        response.setContentType("text/html;charset=utf-8");          
+        /* 设置响应头允许ajax跨域访问 */  
+        response.setHeader("Access-Control-Allow-Origin", "*");  
+        /* 星号表示所有的异域请求都可以接受， */  
+        response.setHeader("Access-Control-Allow-Methods", "GET,POST");  
+       
+        //获取微信小程序get的参数值并打印
+        String theme= request.getParameter("match_theme"); 
+        System.out.println("更改比赛数据match_theme="+theme);   
+        String time = request.getParameter("match_time");  
+        String week=request.getParameter("match_week");
+        String address = request.getParameter("match_address");
+        String rule=request.getParameter("match_rule");
+        String color=request.getParameter("match_color");
+        String remarks=request.getParameter("match_remarks");
+        String openid=request.getParameter("openid");
+        String uuid=request.getParameter("uuid");
+        System.out.println("更改比赛数据uuid="+uuid);
+        System.out.println("更改比赛数据openid="+openid);
+        String longitude1=request.getParameter("longitude");
+        String latitude1=request.getParameter("latitude");
+        System.out.println("更改比赛数据longitude="+longitude1);
+        System.out.println("更改比赛数据latitude="+latitude1);
+        double longitude=Double.valueOf(longitude1);
+        double latitude=Double.valueOf(latitude1);
+        System.out.println("longitude="+longitude);  
+         int result=new Operate().edit_match(theme, time, week, address, longitude, latitude, rule, color, remarks, uuid);
+         int result2=new Operate().edit_matchStatus(uuid, openid, time);
+        //返回值给微信小程序
+        Writer out = response.getWriter(); 
+        out.write("更改成功");
+        out.flush();  
+        
+        
+    }
+
+	//删除比赛数据
+	public void delete_match(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException, ClassNotFoundException, SQLException {
+        // TODO Auto-generated method stub
+        
+        response.setContentType("text/html;charset=utf-8");          
+        /* 设置响应头允许ajax跨域访问 */  
+        response.setHeader("Access-Control-Allow-Origin", "*");  
+        /* 星号表示所有的异域请求都可以接受， */  
+        response.setHeader("Access-Control-Allow-Methods", "GET,POST");  
+       
+        //获取微信小程序get的参数值
+        String openid=request.getParameter("openid");
+        String uuid=request.getParameter("uuid");
+        System.out.println("删除比赛数据uuid="+uuid);
+        System.out.println("删除比赛数据openid="+openid);
+         Boolean delete=new Operate().delete_match(uuid,openid);
+        
+        //返回值给微信小程序
+        Writer out = response.getWriter(); 
+        out.write("更改成功");
+        out.flush();  
+        
+        
+    }
 }
 	
   

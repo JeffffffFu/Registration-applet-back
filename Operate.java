@@ -30,20 +30,23 @@ public class Operate {
            Class.forName("com.mysql.jdbc.Driver");
            //获得数据库连接
            conn=(Connection)DriverManager.getConnection(url,username,password);
-           String sql="insert into match_information (uuid,theme,time,address,rule,color,people,remarks,sponsor,user_join,user_leave)"
-           		+ "values(?,?,?,?,?,?,?,?,?,?,?)";
+           String sql="insert into match_information (uuid,theme,time,week,address,rule,color,people,remarks,sponsor,user_join,user_leave,longitude,latitude)"
+           		+ "values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
            pstmt=conn.prepareStatement(sql);
            pstmt.setString(1, ee.Uuid);
            pstmt.setString(2, ee.Theme);
            pstmt.setString(3, ee.Time);
-           pstmt.setString(4, ee.Address);
-           pstmt.setString(5, ee.Rule);
-           pstmt.setString(6, ee.Color);
-           pstmt.setString(7, ee.People);
-           pstmt.setString(8, ee.Remarks);
-           pstmt.setString(9, ee.Sponsor);
-           pstmt.setString(10, ee.User_join);
-           pstmt.setString(11, ee.User_leave);
+           pstmt.setString(4, ee.Week);
+           pstmt.setString(5, ee.Address);
+           pstmt.setString(6, ee.Rule);
+           pstmt.setString(7, ee.Color);
+           pstmt.setString(8, ee.People);
+           pstmt.setString(9, ee.Remarks);
+           pstmt.setString(10, ee.Sponsor);
+           pstmt.setString(11, ee.User_join);
+           pstmt.setString(12, ee.User_leave);
+           pstmt.setDouble(13,ee.Longitude);
+           pstmt.setDouble(14, ee.Latitude);
            pstmt.execute();
              }catch(ClassNotFoundException e){
                  e.printStackTrace();
@@ -56,7 +59,7 @@ public class Operate {
   }
    
    //按照用户表中的比赛字段来查询对应ID的比赛
-   public  ResultSet inquire_match(String user_match) throws ClassNotFoundException, SQLException {
+   public  ResultSet inquire_match(String user_match,String openid) throws ClassNotFoundException, SQLException {
 	   String url = "jdbc:mysql://localhost:3306/match?useSSL=false";
        String username = "root";//数据库账户，一般为root
        String password = "15606081231";//数据库密码
@@ -68,7 +71,7 @@ public class Operate {
            //获得数据库连接
            conn=(Connection)DriverManager.getConnection(url,username,password);
            String sql1="UPDATE  match_status  SET match_status='3' WHERE STR_TO_DATE(match_time,'%Y-%m-%d %H:%i:%s') < NOW()";
-           String sql="SELECT * FROM (SELECT * FROM  match_information WHERE FIND_IN_SET(id,'"+user_match+"')) AS a LEFT JOIN (SELECT * FROM match_status WHERE openid='ovmMc5LNugu4cL005ff5uGG9COjM') AS b ON a.uuid=b.status_uuid order by a.id desc";    
+           String sql="SELECT * FROM (SELECT * FROM  match_information WHERE FIND_IN_SET(id,'"+user_match+"')) AS a LEFT JOIN (SELECT * FROM match_status WHERE openid='"+openid+"') AS b ON a.uuid=b.status_uuid order by a.id desc";    
            stmt=(Statement) conn.createStatement();
            stmt.executeUpdate(sql1);
            ResultSet rs=stmt.executeQuery(sql);
@@ -179,6 +182,23 @@ public class Operate {
            return  allUser;
       
    }
+   //根据uuid和openid将比赛表和比赛转态表拼接起来。
+  public  ResultSet find_matchStatus(String uuid,String openid) throws ClassNotFoundException, SQLException {
+	   String url = "jdbc:mysql://localhost:3306/match?useSSL=false";
+      String username = "root";//数据库账户，一般为root
+      String password = "15606081231";//数据库密码
+      Connection conn=null;
+      Statement stmt=null;
+          //加载驱动程序
+          Class.forName("com.mysql.jdbc.Driver");
+          //获得数据库连接
+          conn=(Connection)DriverManager.getConnection(url,username,password);
+          String sql="SELECT * FROM (select * from match_information where uuid='"+uuid+"') AS a LEFT JOIN (SELECT * FROM match_status WHERE openid='"+openid+"') AS b ON a.uuid=b.status_uuid";
+          stmt=(Statement) conn.createStatement();
+          ResultSet allUser=stmt.executeQuery(sql);
+          return  allUser;
+     
+  }
    
       //将这场比赛报名字段和请假字段中中，新得到的字符串替换原来的字符串
     public  int update_join(String uuid,String rs_join,String rs_leave) throws ClassNotFoundException, SQLException { //传入两个参数，一个是比赛的openid,找到这场比赛，一个是新的报名字段字符串
@@ -282,7 +302,25 @@ public class Operate {
         return true;
    }
 
-    //更新match_status中比赛对应用户的状态
+    //在match_status中更新比赛状态和比赛时间
+    public int edit_matchStatus(String uuid,String openid,String time) throws ClassNotFoundException, SQLException{
+        String url = "jdbc:mysql://localhost:3306/match?useSSL=false";
+        String username = "root";//数据库账户，一般为root
+        String password = "15606081231";//数据库密码
+        Connection conn=null;
+        Statement stmt=null;
+     
+            //加载驱动程序
+            Class.forName("com.mysql.jdbc.Driver");
+            //获得数据库连接
+            conn=(Connection)DriverManager.getConnection(url,username,password);
+            String sql="update match_status set match_time='"+time+"' where status_uuid='"+uuid+"' and openid='"+openid+"'";
+            stmt=(Statement) conn.createStatement();
+            int result=stmt.executeUpdate(sql);
+            return  result;
+   }
+  
+   //更新match_status中比赛对应用户的状态
     public  int update_matchStatus(String uuid,String openid,String status) throws ClassNotFoundException, SQLException {
  	   String url = "jdbc:mysql://localhost:3306/match?useSSL=false";
         String username = "root";//数据库账户，一般为root
@@ -317,6 +355,47 @@ public class Operate {
 	           return leave_imformation;
 	           
 	   }
+     
+  //修改match中对应uuid的比赛信息
+    public  int edit_match(String theme,String time,String week,String address,Double longitude,Double latitude,String rule,String color,String remarks,String uuid) throws ClassNotFoundException, SQLException {
+ 	   String url = "jdbc:mysql://localhost:3306/match?useSSL=false";
+        String username = "root";//数据库账户，一般为root
+        String password = "15606081231";//数据库密码
+        Connection conn=null;
+        Statement stmt=null;    
+            //加载驱动程序
+            Class.forName("com.mysql.jdbc.Driver");
+            //获得数据库连接
+            conn=(Connection)DriverManager.getConnection(url,username,password);
+            String sql="update match_information set theme='"+theme+"',time='"+time+"',week='"+week+"',address='"+address+"',"
+            		+ "longitude='"+longitude+"',latitude='"+latitude+"',rule='"+rule+"',color='"+color+"',"
+            				+ "remarks='"+remarks+"' where uuid='"+uuid+"'";
+            stmt=(Statement) conn.createStatement();
+            int result=stmt.executeUpdate(sql);
+            return  result;
+            
+    }
+ 
+    //从match_information表和match_status表中删除对应数据
+    public Boolean delete_match(String uuid,String openid) throws ClassNotFoundException, SQLException { //传入两个参数，一个是比赛的openid,找到这场比赛，一个是新的报名字段字符串
+		   String url = "jdbc:mysql://localhost:3306/match?useSSL=false";
+	       String username = "root";//数据库账户，一般为root
+	       String password = "15606081231";//数据库密码
+	       Connection conn=null;
+	       Statement stmt=null;
+	           //加载驱动程序
+	           Class.forName("com.mysql.jdbc.Driver");
+	           //获得数据库连接
+	           conn=(Connection)DriverManager.getConnection(url,username,password);
+	           String sql_information="delete from match_information where uuid='"+uuid+"'";
+	           String sql_status="delete from match_status where status_uuid='"+uuid+"' and openid='"+openid+"'";
+	           stmt=(Statement) conn.createStatement();
+	           int update1=stmt.executeUpdate(sql_information);
+	           int update2=stmt.executeUpdate(sql_status);
+	           return true;
+	           
+	   }
+    
 }
 
 

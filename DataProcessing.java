@@ -97,4 +97,9 @@ public class DataProcessing {
 		}
 		 
 	 }
+	//计算以逗号相隔的字符串的字符串个数
+	public int count_string(String string){   //传入两个参数，一个是本身原来的字符串，另一个是要加入的
+			String[] split=string.split(",");
+			return split.length;
+		}
 }
