@@ -2,8 +2,10 @@ package com.Servlet;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -99,7 +101,15 @@ public class DataProcessing {
 	 }
 	//计算以逗号相隔的字符串的字符串个数
 	public int count_string(String string){   //传入两个参数，一个是本身原来的字符串，另一个是要加入的
+
 			String[] split=string.split(",");
 			return split.length;
 		}
+	
+	//获取当前日期时间
+	public String get_time(){   //传入两个参数，一个是本身原来的字符串，另一个是要加入的
+		 SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
+		 return df.format(new Date());
+	}
+	
 }

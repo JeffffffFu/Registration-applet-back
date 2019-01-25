@@ -56,10 +56,12 @@ public class MyServlet extends BaseServlet {
         String match_week=request.getParameter("match_week");
         String match_address = request.getParameter("match_address");
         String match_rule=request.getParameter("match_rule");
-        String match_color=request.getParameter("match_color");
+        String match_directions=request.getParameter("match_directions");
         String match_people=request.getParameter("match_people");
         String match_remarks=request.getParameter("match_remarks");
-        String sponsor=request.getParameter("user_name");
+        String sponsor2=request.getParameter("user_name");
+        String sponsor=sponsor2.replaceAll("[\\x{10000}-\\x{10FFFF}]", "");
+        String sponsor_openid=request.getParameter("openid");
         String openid=request.getParameter("openid");
         String longitude1=request.getParameter("longitude");
         String latitude1=request.getParameter("latitude");
@@ -72,7 +74,7 @@ public class MyServlet extends BaseServlet {
         String uuid=key.getId();
         String id=null;
         String match=null;
-        Match em=new Match(uuid,match_theme, match_time,match_week, match_address,match_rule,match_color,match_people,match_remarks,sponsor,"","",longitude,latitude);
+        Match em=new Match(uuid,match_theme, match_time,match_week, match_address,match_rule, match_directions,match_people,match_remarks,sponsor,sponsor_openid,"","",longitude,latitude);
         Operate add=new Operate();
         add.add_match(em);   //将这条数据存入数据库
         //根据UUid找出比赛的信息
@@ -80,16 +82,16 @@ public class MyServlet extends BaseServlet {
         while(resultSet.next()) {
         	id=resultSet.getString("id");  //取出比赛ID
         }
-        System.out.println("id="+id);
         ResultSet user_information=new Operate().find_userId(openid);  //根据openid找出用户的信息
         while(user_information.next()) {
         	match=user_information.getString("match");  //取出用户的比赛字段
         }
        //比赛字段中加入比赛ID，然后存进这个openid的用户中
         String new_userMatch=new DataProcessing().increase_string(match, id);   //进行字符串的处理，在原来的字符串后加上新的字符，用re_leave接住
-       //在user表中，将比赛的id加入到对应用户的比赛字段中。
+        System.out.println("new_usermatch:"+new_userMatch);
+        //在user表中，将比赛的id加入到对应用户的比赛字段中。
         new Operate().update_userMatch(new_userMatch, openid);
-        new Operate().add_matchStatus(uuid, openid,"0", match_time);
+        new Operate().add_matchStatus(uuid, openid,"0", match_time,"0");
         //使用Gson类需要导入gson-2.8.0.jar
         String json = new Gson().toJson(em);
         //返回值给微信小程序
@@ -108,13 +110,12 @@ public class MyServlet extends BaseServlet {
 	        /* 星号表示所有的异域请求都可以接受， */  
 	        response.setHeader("Access-Control-Allow-Methods", "GET,POST");
 	        String openid=request.getParameter("openid");
-	        System.out.println("取出openid:"+openid);
+            String mark_sponsor=null;
 	        String user_match=null;
 	        ResultSet user_information=new Operate().find_userId(openid);
 	        while(user_information.next()) {
 	        	user_match=user_information.getString("match");
 	        }
-	       System.out.println("user_match:"+user_match);
              //取出查询到的数据集
 	        ResultSet rs=new Operate().inquire_match(user_match,openid);
 	        //调用转化方法，将其转化成json数据
@@ -132,13 +133,18 @@ public class MyServlet extends BaseServlet {
 	        response.setHeader("Access-Control-Allow-Origin", "*");  
 	        /* 星号表示所有的异域请求都可以接受， */  
 	        response.setHeader("Access-Control-Allow-Methods", "GET,POST");
-
+            String match="47";
             String appsercet=request.getParameter("appsercet");
             String appid=request.getParameter("appid");
             String Code=request.getParameter("code");
             String grant_type=request.getParameter("grant_type");
-            String user_name=request.getParameter("user_name");
+            String user_name2=request.getParameter("user_name");
+            String user_name = user_name2.replaceAll("[\\x{10000}-\\x{10FFFF}]", "");
             String user_url=request.getParameter("user_url");
+            String uuid="1cc5b8dc1c8944d48000a2fde4c79a0b";
+            String status="0";
+            String time="2020-01-25 10:00";
+            String click_time="0";
             System.out.println("Code:"+Code);
             System.out.println("appsercet:"+appsercet);
             System.out.println("appid:"+appid);
@@ -148,6 +154,7 @@ public class MyServlet extends BaseServlet {
             new WeiXinOpenid();
            //向网站请求，调取方法，获取openid
 			String openID=WeiXinOpenid.GetOpenID(appid, appsercet, Code);
+			System.out.println("openid"+openID);
             //将json格式的数据，取出相应的数值
             JSONObject jsonObject = JSONObject.fromObject(openID);
               String openid= (String) jsonObject.get("openid");
@@ -155,12 +162,18 @@ public class MyServlet extends BaseServlet {
              //判断该openid是否已经存在,如果存在则更新姓名和头像，如果不存在则插入新记录
              ResultSet user_imformation=new Operate().inquire_openid(openid);
              if(user_imformation.next()) {                   //判断数据集是否有值,如果有则更新，没有就添加
-            	 User user=new User(openid,user_name,user_url);
+            	 User user=new User(openid,user_name,user_url,match);
             	 new Operate().update_user(user);
              }else {
-            	    User user=new User(openid,user_name,user_url);
+            	    User user=new User(openid,user_name,user_url,match);
                     System.out.println("user:"+user);
                      new Operate().add_user(user);
+             }
+             ResultSet match_status=new Operate().inquire_matchStatus(uuid, openid);
+             if(match_status.next()) {                   //判断数据集是否有值,如果有则更新，没有就添加
+            	
+             }else {
+                     new Operate().add_matchStatus(uuid, openid,status,time,click_time);
              }
             //将值处理为json数据，返回值给微信小程序
             String json = new Gson().toJson(openID);
@@ -180,14 +193,14 @@ public class MyServlet extends BaseServlet {
 	        String id_match=null;     //存储需要加入的比赛ID
 	        String user_match=null; //存储从数据库中取出的对应用户的比赛字段
 	        String id=null;
-	        String status="1";
+	        String status="1";  //用户对应这个比赛的状态 报名/请假/结束
 	        String join=null;   //从报名字段中取出的字符串存入其中
 	        String leave=null;  //从情节字段中取出的字符串存入其中
 	        String openid=request.getParameter("openid");
 	        String uuid=request.getParameter("uuid");
 	        String time=request.getParameter("time");
-	        System.out.println("openid:"+openid);
-	        System.out.println("uuid:"+uuid);	        
+	        System.out.println("timetime:"+time);
+            String click_time=new DataProcessing().get_time();   //调用函数获取当前最新日期时间    
 	        ResultSet userId=new Operate().find_userId(openid);  //根据openid找出用户的id
 	        while(userId.next()) {
               id=userId.getString("id");       //获取新的报名人
@@ -212,18 +225,18 @@ public class MyServlet extends BaseServlet {
 	        //在match表中，将这场比赛新的报名字段字符串和请假字段字符串，替换原来的报名和请假。
 	        new Operate().update_join(uuid,rs_join,rs_leave);
 	        //取出这场比赛中的所有报名人和请假人的姓名和头像，进行处理后，传回给微信小程序
-	        ResultSet register_information=new Operate().register_information(rs_join);
-	        ResultSet leave_information=new Operate().leave_information(rs_leave);
+	        ResultSet register_information=new Operate().register_information(rs_join,uuid);
+	        ResultSet leave_information=new Operate().leave_information(rs_leave,uuid);
 	        String json_register=new DataProcessing().resultSetToJson(register_information);
 	        String json_leave=new DataProcessing().resultSetToJson(leave_information);
 	         //获取比赛状态，如果没有这场则插入并赋予其报名状态，如果有则将其转态变为更新状态
 	        ResultSet match_status=new Operate().inquire_matchStatus(uuid, openid);
             if(match_status.next()) {                   //判断数据集是否有值,如果有则更新，没有就添加
-           	 new Operate().update_matchStatus(uuid, openid,status);
+           	 new Operate().update_matchStatus(uuid, openid,status,click_time);
             }else {
-                    new Operate().add_matchStatus(uuid, openid,status,time);
+                    new Operate().add_matchStatus(uuid, openid,status,time,click_time);
             }
-	       //进行两个json数组的合并嵌套，需要JSONObject对象进行合并嵌套
+	       //进行两个json数组的合并嵌套，需要JSONObject对象进行合并 嵌套    
 	        JSONObject jsonObject = new JSONObject();
 	        jsonObject.put("json_register", json_register);
 	        jsonObject.put("json_leave", json_leave);
@@ -243,6 +256,7 @@ public class MyServlet extends BaseServlet {
 	        /* 星号表示所有的异域请求都可以接受， */  
 	        response.setHeader("Access-Control-Allow-Methods", "GET,POST");
 	        String status="2";
+	        String click_time=new DataProcessing().get_time();   //调用函数获取当前最新日期时间    
 	        String id=null;            //存储用户的id
 	        String id_match=null;     //存储需要加入的比赛ID
 	        String user_match=null; //存储从数据库中取出的对应用户的比赛字段
@@ -279,16 +293,16 @@ public class MyServlet extends BaseServlet {
 	        //在match表中，将这场比赛新的报名字段字符串和请假字段字符串，替换原来的报名和请假。
 	        new Operate().update_join(uuid,rs_join,rs_leave);
 	        //取出这场比赛中的所有报名人和请假人的姓名和头像，进行处理后，传回给微信小程序
-	        ResultSet register_information=new Operate().register_information(rs_join);
-	        ResultSet leave_information=new Operate().leave_information(rs_leave);
+	        ResultSet register_information=new Operate().register_information(rs_join,uuid);
+	        ResultSet leave_information=new Operate().leave_information(rs_leave,uuid);
 	        String json_register=new DataProcessing().resultSetToJson(register_information);
 	        String json_leave=new DataProcessing().resultSetToJson(leave_information);
 	         //获取比赛状态，如果没有这场则插入并赋予其报名状态，如果有则将其转态变为更新状态
 	        ResultSet match_status=new Operate().inquire_matchStatus(uuid, openid);
            if(match_status.next()) {                   //判断数据集是否有值,如果有则更新，没有就添加
-          	 new Operate().update_matchStatus(uuid, openid,status);
+          	 new Operate().update_matchStatus(uuid, openid,status,click_time);
            }else {
-                   new Operate().add_matchStatus(uuid, openid, status,time);
+                   new Operate().add_matchStatus(uuid, openid, status,time,click_time);
            }
 	        //进行两个json数组的合并嵌套，需要JSONObject对象进行合并嵌套
 	        JSONObject jsonObject = new JSONObject();
@@ -323,18 +337,21 @@ public class MyServlet extends BaseServlet {
 	        while(user_id.next()) {
 	        	id=user_id.getString("id");
 	        }
+	        System.out.println("id:"+id);
 	        ResultSet result=new Operate().find_matchInformation(uuid);  //根据uuid查出对应比赛信息      
 	        //取出数据集中，报名和请假的人
 	        while(result.next()) {
 	        	join=result.getString("user_join");  
 	        	leave=result.getString("user_leave"); 
 	        }
+	        System.out.println("join:"+join);
+	        System.out.println("leave:"+leave);
 	         //判断该用户ID是否已经报名或请假，存在则返回true，否则为false
 	        Boolean disable_join=new DataProcessing().judge_string(join, id);
 	        Boolean disable_leave=new DataProcessing().judge_string(leave, id);
 	        //取出这场比赛中的所有报名人和请假人的姓名和头像，进行处理后，传回给微信小程序
-	        ResultSet register_information=new Operate().register_information(join);
-	        ResultSet leave_information=new Operate().leave_information(leave);
+	        ResultSet register_information=new Operate().register_information(join,uuid);
+	        ResultSet leave_information=new Operate().leave_information(leave,uuid);
 	        String json_register=new DataProcessing().resultSetToJson(register_information);
 	        String json_leave=new DataProcessing().resultSetToJson(leave_information);
 	        //因为上面.next过了，可能导致这个数据集中的数据消失了，他们两段代码位置调换也会导致一侧的数据没有。所以只能重新去数据库查询了一遍。
@@ -343,6 +360,8 @@ public class MyServlet extends BaseServlet {
 	        	longitude=rs.getDouble("longitude");  //因为经纬度是double类型 所以需要单独取出来 再拼接进去
 	        	latitude=rs.getDouble("latitude");
 	        }
+	        System.out.println("longitude:"+longitude);
+	        System.out.println("latitude:"+latitude);
 	        ResultSet re=new Operate().find_matchStatus(uuid, openid); 
 	        String match_information=new DataProcessing().resultSetToJson(re);
 	       //进行三个json数组的合并嵌套，需要JSONObject对象进行合并嵌套
@@ -372,26 +391,23 @@ public class MyServlet extends BaseServlet {
         response.setHeader("Access-Control-Allow-Methods", "GET,POST");  
        
         //获取微信小程序get的参数值并打印
-        String theme= request.getParameter("match_theme"); 
-        System.out.println("更改比赛数据match_theme="+theme);   
-        String time = request.getParameter("match_time");  
+        String theme=request.getParameter("match_theme");  
+        String time=request.getParameter("match_time");
         String week=request.getParameter("match_week");
+        System.out.println("更改比赛数据match_theme="+theme);
+        System.out.println("更改比赛数据match_time="+time);
+        System.out.println("更改比赛数据match_week="+week);
         String address = request.getParameter("match_address");
         String rule=request.getParameter("match_rule");
-        String color=request.getParameter("match_color");
+        String directions=request.getParameter("match_directions");
         String remarks=request.getParameter("match_remarks");
         String openid=request.getParameter("openid");
         String uuid=request.getParameter("uuid");
-        System.out.println("更改比赛数据uuid="+uuid);
-        System.out.println("更改比赛数据openid="+openid);
         String longitude1=request.getParameter("longitude");
         String latitude1=request.getParameter("latitude");
-        System.out.println("更改比赛数据longitude="+longitude1);
-        System.out.println("更改比赛数据latitude="+latitude1);
         double longitude=Double.valueOf(longitude1);
         double latitude=Double.valueOf(latitude1);
-        System.out.println("longitude="+longitude);  
-         int result=new Operate().edit_match(theme, time, week, address, longitude, latitude, rule, color, remarks, uuid);
+         int result=new Operate().edit_match(theme, time, week, address, longitude, latitude, rule, directions, remarks, uuid);
          int result2=new Operate().edit_matchStatus(uuid, openid, time);
         //返回值给微信小程序
         Writer out = response.getWriter(); 

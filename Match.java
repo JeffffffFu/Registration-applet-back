@@ -8,31 +8,45 @@ public class Match {
     protected String Week;       //比赛星期
     protected String Rule;       //比赛赛制
     protected String People;        //限制人数
-    protected String Color;      //衣服颜色
+    protected String  Directions;      //衣服颜色
     protected String Remarks;      //备注说明
-    protected String Sponsor;    //发起人
+    protected String Sponsor;    //发起人姓名
+    protected String Sponsor_openid; //发起人openid
     protected String User_join;      //报名参加的人
     protected String User_leave;      //请假的人
     protected double Longitude;        //经度
     protected double Latitude;        //纬度
 
-    public Match(String Uuid,String Theme,String Time,String Week,String Address,String Rule,String Color,String People,String Remarks,String Sponsor,String User_join,String User_leave,Double Longitude,Double Latitude) {	
+    public Match(String Uuid,String Theme,String Time,String Week,String Address,String Rule,String  Directions,String People,String Remarks,String Sponsor,String Sponsor_openid,String User_join,String User_leave,Double Longitude,Double Latitude) {	
     	this.Uuid=Uuid;
     	this.Theme=Theme;
     	this.Address=Address;
     	this.Time=Time;
     	this.Week=Week;
     	this.Rule=Rule;
-    	this.Color=Color;
+    	this.Directions=Directions;
     	this.People=People;
     	this.Remarks=Remarks;
     	this.Sponsor=Sponsor;
+    	this.Sponsor_openid=Sponsor_openid;
     	this.User_join=User_join;
     	this.User_leave=User_leave;	
     	this.Longitude=Longitude;
     	this.Latitude=Latitude;
 	}
    
+
+
+	public String getSponsor_openid() {
+		return Sponsor_openid;
+	}
+
+
+
+	public void setSponsor_openid(String sponsor_openid) {
+		Sponsor_openid = sponsor_openid;
+	}
+
 
 
 	public String getWeek() {
@@ -121,11 +135,11 @@ public class Match {
 	}
 
 	public String getColor() {
-		return Color;
+		return  Directions;
 	}
 
-	public void setColor(String color) {
-		Color = color;
+	public void setColor(String directions) {
+		 Directions =  directions;
 	}
 
 	public String getRemarks() {
