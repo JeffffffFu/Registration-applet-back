@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.imooc.dao.MatchStatusDao">
+    <!--将超出当前时间的比赛的状态修改为3 -->
+    <update id="updateMatchStatus" >
+    update match_status set match_status='3' WHERE
+    STR_TO_DATE(match_time,'%Y-%m-%d %H:%i:%s') &lt; NOW()
+</update>
+    <!-- 插入比賽状态 -->
+    <insert id="createMatchStatus" parameterType="com.imooc.entity.Match_status">
+		<!-- 查看是否存在openid,count(*)为得到的行数，如果存在及更新，否则插入 -->
+		<selectKey keyProperty="statusId" order="BEFORE" resultType="int">
+			select count(*) from match_status where openid = #{openid} and
+			status_uuid=#{statusUuid}
+		</selectKey>
+
+		<!-- 如果大于0则更新 -->
+		<if test="statusId>0">
+			update match_status set
+			match_status=#{matchStatus},click_time=#{clickTime}
+			where openid = #{openid} and status_uuid=#{statusUuid}
+		</if>
+
+		<!-- 如果等于0则保存 -->
+		<if test="statusId==0">
+			INSERT INTO
+			match_status
+			(status_uuid,openid,match_status,match_time,click_time)
+			VALUES
+			(#{statusUuid},#{openid},#{matchStatus},#{matchTime},#{clickTime})
+		</if>
+
+	</insert>
+	<!-- 取出对应uuid和openid和比赛状态-->
+	<select id="queryMatchStatus" parameterType="com.imooc.entity.Match_status" resultType="com.imooc.entity.Match_status" >
+		SELECT * FROM match_status where openid=#{openid} and status_uuid=#{statusUuid}
+	  </select>
+	<!--修改比赛状态的比赛时间-->
+	<update id="updateMatchStatusTime" parameterType="com.imooc.entity.Match_status">
+		update match_status set match_time=#{matchTime} where
+		status_uuid=#{statusUuid}
+	</update>
+</mapper>

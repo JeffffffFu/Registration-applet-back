@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.imooc.dao.UserDao">
+    <!-- 这边组合了结果集-取出对应uuid的报名/请假用户的信息和点击时间  -->
+    <resultMap type="com.imooc.entity.User" id="getUserMap">
+        <id property="id" column="id" />
+        <result property="userName" column="user_name" />
+        <result property="userUrl" column="user_url" />
+        <association property="matchStatus" javaType="com.imooc.entity.Match_status">
+            <id property="statusUuid" column="status_uuid" />
+            <result property="clickTime" column="click_time" />
+            <result property="matchTime" column="match_time" />
+        </association>
+    </resultMap>
+
+    <!-- 插入/更新用户数据2 -->
+    <insert id="insertUser2" parameterType="String">
+
+            insert IGNORE into user(openid) values(#{openid})
+
+    </insert>
+
+    <!-- 插入/更新用户数据 -->
+    <insert id="insertUser" parameterType="com.imooc.entity.User">
+        <!-- 查看是否存在openid,count(*)为得到的行数，如果存在及更新，否则插入 -->
+        <selectKey keyProperty="id" order="BEFORE" resultType="int">
+            select count(*) from user where openid = #{openid}
+        </selectKey>
+
+        <!-- 如果大于0则更新 -->
+        <if test="id>0">
+            update user set
+            user_name=#{userName},user_url=#{userUrl},user_country=#{userCountry},user_province=#{userProvince},user_city=#{userCity},user_gender=#{userGender}
+            where openid=#{openid}
+        </if>
+
+        <!-- 如果等于0则保存 -->
+        <if test="id==0">
+            insert into
+            user(openid,user_name,user_url,user_country,user_province,user_city,user_gender)
+            values(#{openid},#{userName},#{userUrl},#{userCountry},#{userProvince},#{userCity},#{userGender})
+        </if>
+    </insert>
+<!--取出对应用户的信息 -->
+<select id="queryUserInformation" parameterType="String" resultType="com.imooc.entity.User">
+    select * from user WHERE openid=#{openid}
+</select>
+    <!--编辑修改User表里的字段 -->
+    <update id="updateUser"  parameterType="com.imooc.entity.User">
+        UPDATE user
+        <trim prefix="set" suffixOverrides=",">
+            <if test="id!=0">id=#{id},</if>
+            <if test="openid!=null">openid=#{openid},</if>
+            <if test="userName!=null">user_name=#{userName},</if>
+            <if test="userUrl!=null">user_url=#{userUrl},</if>
+            <if test="match!=null">`match`=#{match},</if>
+            <if test="userCountry!=null">user_country=#{userCountry},</if>
+            <if test="userProvince!=null">user_province=#{userProvince},</if>
+            <if test="userCity!=null">user_city=#{userCity},</if>
+            <if test="userGender!=null">user_gender=#{userGender},</if>
+            <if test="matchStatus!=null">match_status=#{matchStatus},</if>
+        </trim>
+              where openid=#{openid}
+    </update>
+
+    <!-- 取出对应uuid的 报名/请假用户的信息和点击时间 -->
+    <select id="getJoinOrLeaveInformation" resultMap="getUserMap" parameterType="String">
+		select * from (select * from user where FIND_IN_SET
+		(id,#{id,jdbcType=VARCHAR}))
+		AS a LEFT JOIN(SELECT * FROM match_status where status_uuid=#{uuid,jdbcType=VARCHAR})
+		AS b on a.openid=b.openid ORDER BY click_time;
+	</select>
+
+    <!--修改指定openid的match字段-->
+    <update id="updateUserMatch" parameterType="String">
+            update user set `match`=#{match} where  openid=#{openid}
+    </update>
+</mapper>

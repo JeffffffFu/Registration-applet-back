@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.imooc.dao.MatchDao">
+        <!--为queryMatchAndStatus封装的结果集-->
+        <resultMap type="com.imooc.entity.Match" id="getMatchMap">
+                <id property="uuid" column="uuid" />
+                <result property="theme" column="theme" />
+                <result property="address" column="address" />
+                <result property="Week" column="Week" />
+                <result property="Time" column="Time" />
+                <result property="deadlineTime" column="Deadline_Time" />
+                <result property="deadlineWeek" column="Deadline_Week" />
+                <result property="Rule" column="Rule" />
+                <result property="People" column="People" />
+                <result property="Directions" column="Directions" />
+                <result property="Sponsor" column="sponsor" />
+                <result property="sponsorOpenid" column="sponsor_openid" />
+                <result property="UserJoin" column="User_join" />
+                <result property="UserLeave" column="User_leave" />
+                <result property="Longitude" column="Longitude" />
+                <result property="Latitude" column="Latitude" />
+                <association property="matchStatus" javaType="com.imooc.entity.Match_status">
+                        <id property="statusUuid" column="status_uuid" />
+                        <result property="openid" column="openid" />
+                        <result property="matchStatus" column="match_status" />
+                        <result property="clickTime" column="click_time" />
+                        <result property="matchTime" column="match_time" />
+                        <result property="id" column="statusId" />
+                </association>
+        </resultMap>
+        <!-- 取出对应openid用户参加的所有比赛信息和状态，getMatchMap是封装的结果集 -->
+        <select id="queryMatchAndStatus" parameterType="String" resultMap="getMatchMap" >
+		SELECT * FROM match_information a,match_status b WHERE b.openid=#{openid} and
+		a.uuid=b.status_uuid AND FIND_IN_SET(a.id,#{userMatch}) order by
+		a.time desc
+	  </select>
+    <!-- 取出对应uuid的比赛信息-->
+    <select id="queryMatch" parameterType="String" resultType="com.imooc.entity.Match" >
+		SELECT * FROM match_information where uuid=#{uuid}
+	  </select>
+        <!-- 取出对应openid用户最近的一场比赛信息，即历史记录 -->
+        <select id="queryMatchHistory" parameterType="String" resultType="com.imooc.entity.Match">
+		select * from match_information where
+		sponsor_openid=#{openid} order by id desc limit 0,1
+	</select>
+        <!-- 创建比赛，插入比賽信息 设置后面三个可以返回插入时的ID-->
+        <insert id="createMatch" parameterType="com.imooc.entity.Match" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+		INSERT INTO match_information
+		(uuid,theme,time,week,deadline_time,deadline_week,address,rule,
+		directions,people,sponsor_openid,user_join,user_leave,longitude,latitude)
+		VALUES
+		(#{uuid},#{theme},#{time},#{week},#{deadlineTime},#{deadlineWeek},#{address},#{rule},#{directions},#{people},#{sponsorOpenid},#{userJoin},#{userLeave},#{longitude},#{latitude})
+	</insert>
+    <!-- 取出对应uuid和openid的这次比赛的信息和状态 -->
+    <select id="queryMatchAndStatusByUuid" resultMap="getMatchMap" parameterType="String">
+		SELECT * FROM (select * from match_information where
+		uuid=#{uuid}) AS a
+		LEFT JOIN (SELECT * FROM match_status WHERE openid=#{openid}) AS b
+		ON a.uuid=b.status_uuid
+	</select>
+    <!--将新的match字符串替换原来的match -->
+    <update id="updateMatch" parameterType="com.imooc.entity.Match">
+		update match_information
+		set theme=#{theme},time=#{time},week=#{week},address=#{address},
+		longitude=#{longitude},latitude=#{latitude},rule=#{rule},directions=#{directions},people=#{people}
+		where uuid=#{uuid}
+	</update>
+    <!-- 刪除match表和match_status表的數據-->
+    <delete id="deleteMatchAndStatus" parameterType="String" >
+    DELETE match_information,match_status FROM match_information LEFT JOIN match_status ON match_information.uuid = match_status.status_uuid WHERE  match_information.uuid=#{uuid}
+    </delete>
+    <!--修改比赛表(报名/请假字段) -->
+    <update id="updateMatchJoinAndLeave" parameterType="String">
+		update match_information set user_join=#{userJoin},user_leave=#{userLeave}
+		where uuid=#{uuid}
+	</update>
+</mapper>
